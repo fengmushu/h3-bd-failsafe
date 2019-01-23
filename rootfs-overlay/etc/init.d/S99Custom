@@ -13,15 +13,14 @@ case "$1" in
     ;;
 esac
 
-echo
-echo "Starting g_mass_storage script"
-echo "https://github.com/zador-blood-stained/fel-mass-storage"
+logger "Starting g_mass_storage script"
+logger "https://github.com/zador-blood-stained/fel-mass-storage"
 
 cmdline=$(cat /proc/cmdline)
 
 case "$cmdline" in
 	*"root=/dev/"*)
-	echo "Kernel started with root= command line parameter, exiting"
+	logger "Kernel started with root= command line parameter, exiting"
 	exit 0
 	;;
 esac
@@ -33,13 +32,13 @@ elif [ -e "/dev/mmcblk0" ]; then
 	TARGET=/dev/mmcblk0
 	TYPE="MMC 0 (SD)"
 else
-	echo "No SD/eMMC device found"
+	logger "No SD/eMMC device found"
 	exit 0
 fi
 
 export_mmc()
 {
-    echo "Exporting $TYPE ($TARGET)"
+    logger "Exporting $TYPE ($TARGET)"
 
     echo "0" > /sys/bus/platform/devices/sunxi_usb_udc/otg_role
 
@@ -48,7 +47,7 @@ export_mmc()
 
     echo "2" > /sys/bus/platform/devices/sunxi_usb_udc/otg_role
 
-    echo "Done"
+    logger "Done"
 }
 
 recovery_partX()
@@ -57,7 +56,11 @@ recovery_partX()
     local PART=$2
 
     [ -f "$TARF" ] && {
-        echo "recovery $PART from $TARF ..."
+        logger "recovery $PART from $TARF ..."
+
+        echo `date` >> /mnt/recovery.log
+        echo "$TARF -> $PART" >> /mnt/recovery.log
+
         zcat ${TARF} > ${PART}
     }
 }
@@ -66,7 +69,7 @@ recovery_partX()
 mount ${TARGET}p4 /mnt || exit -1
 
 [ -f /mnt/.auto_recovery ] || {
-    echo "do recovery manual..."
+    logger "do recovery manual..."
     exit 0
 }
 
@@ -79,11 +82,10 @@ recovery_partX /mnt/vars.tar.gz ${TARGET}p3
 
 umount /mnt
 
+logger "finished recovery export fs to USB-HOST..."
 export_mmc
 
-# sh
-
-# echo "Shutting down"
+logger "Shutting down recovery"
 # echo "0" > /sys/bus/platform/devices/sunxi_usb_udc/otg_role
 # modprobe -r g_mass_storage
 
