@@ -1,18 +1,5 @@
 #!/bin/sh
 
-# /etc/initramfs-tools/scripts/init-premount/mass_storage
-
-PREREQS=""
-
-prereqs() { echo "$PREREQS"; }
-
-case "$1" in
-    prereqs)
-    prereqs
-    exit 0
-    ;;
-esac
-
 logger "Starting g_mass_storage script"
 logger "https://github.com/zador-blood-stained/fel-mass-storage"
 
@@ -65,21 +52,26 @@ recovery_partX()
     }
 }
 
-# do mmcblk, mmc2 recovery
-mount ${TARGET}p4 /mnt || exit -1
-
+# mmcblk0p3 var have the recovery flags
+mount ${TARGET}p3 /mnt || exit -1
 [ -f /mnt/.auto_recovery ] || {
     logger "do recovery manual..."
+    umount /mnt
     exit 0
 }
+umount /mnt
 
+#part4 is backup storage
+mount ${TARGET}p4 /mnt || {
+    logger "mount recovery data part failed"
+    exit -1
+}
 # part1 root-fs
-recovery_partX /mnt/rootfs.tar.gz ${TARGET}p1
+recovery_partX /mnt/rootfs.img.gz ${TARGET}p1
 # part2 opt: qpt-utils
-recovery_partX /mnt/opt.tar.gz ${TARGET}p2
+recovery_partX /mnt/opt.img.gz ${TARGET}p2
 # part3 vars
-recovery_partX /mnt/vars.tar.gz ${TARGET}p3
-
+recovery_partX /mnt/vars.img.gz ${TARGET}p3
 umount /mnt
 
 logger "finished recovery export fs to USB-HOST..."
@@ -89,4 +81,4 @@ logger "Shutting down recovery"
 # echo "0" > /sys/bus/platform/devices/sunxi_usb_udc/otg_role
 # modprobe -r g_mass_storage
 
-# [ ! -f "/tmp/no_poweroff" ] && poweroff
+[ ! -f "/tmp/no_poweroff" ] && poweroff
