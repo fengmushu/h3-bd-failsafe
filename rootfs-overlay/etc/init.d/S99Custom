@@ -1,16 +1,18 @@
 #!/bin/sh
 
-logger "Starting g_mass_storage script"
-logger "https://github.com/zador-blood-stained/fel-mass-storage"
+logger "Starting H3 auto recovery script"
 
-cmdline=$(cat /proc/cmdline)
-
+cmdline=`cat /proc/cmdline`
 case "$cmdline" in
 	*"root=/dev/"*)
 	logger "Kernel started with root= command line parameter, exiting"
 	exit 0
 	;;
+    *"emergency_type="*)
+    EMC_TYPE=`echo $cmdline | awk -F'emergency_type=' '{print $2}' 2>/dev/null`
+    ;;
 esac
+logger "BOOT as emergency mode: $EMC_TYPE"
 
 if [ -e "/dev/mmcblk1" ]; then
 	TARGET=/dev/mmcblk1
@@ -52,33 +54,49 @@ recovery_partX()
     }
 }
 
-# mmcblk0p3 var have the recovery flags
-mount ${TARGET}p3 /mnt || exit -1
-[ -f /mnt/.auto_recovery ] || {
-    logger "do recovery manual..."
+do_recovery()
+{
+    #part4 is backup storage
+    mount ${TARGET}p4 /mnt || {
+        logger "mount recovery data part failed"
+        exit -1
+    }
+    # part1 root-fs
+    recovery_partX /mnt/rootfs.img.gz ${TARGET}p1
+    # part2 opt: qpt-utils
+    recovery_partX /mnt/opt.img.gz ${TARGET}p2
+    # part3 vars
+    recovery_partX /mnt/vars.img.gz ${TARGET}p3
     umount /mnt
-    exit 0
-}
-umount /mnt
 
-#part4 is backup storage
-mount ${TARGET}p4 /mnt || {
-    logger "mount recovery data part failed"
-    exit -1
+    logger "Shutting down recovery"
+
+    [ ! -f "/tmp/no_poweroff" ] && poweroff
 }
-# part1 root-fs
-recovery_partX /mnt/rootfs.img.gz ${TARGET}p1
-# part2 opt: qpt-utils
-recovery_partX /mnt/opt.img.gz ${TARGET}p2
-# part3 vars
-recovery_partX /mnt/vars.img.gz ${TARGET}p3
-umount /mnt
+
+case "$EMC_TYPE" in
+    1)
+        logger "GPIO key reset pressed force recovery ..."
+        do_recovery
+    ;;
+    2)
+        # mmcblk0p3 var have the recovery flags
+        mount ${TARGET}p3 /mnt || exit -1
+        [ -f /mnt/.auto_recovery ] || {
+            logger "Soft reset BUT no flag file found, Please do it manual ..."
+            umount /mnt
+            exit 0
+        }
+        umount /mnt
+        do_recovery
+    ;;
+    *)
+        logger "unknow emergency mode ... exit~!"
+    ;;
+esac
 
 logger "finished recovery export fs to USB-HOST..."
 export_mmc
 
-logger "Shutting down recovery"
 # echo "0" > /sys/bus/platform/devices/sunxi_usb_udc/otg_role
 # modprobe -r g_mass_storage
-
-[ ! -f "/tmp/no_poweroff" ] && poweroff
