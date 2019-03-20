@@ -1,6 +1,7 @@
 #!/bin/sh
 
 logger "Starting H3 auto recovery script"
+NO_POWER_OFF="/tmp/no_poweroff"
 
 cmdline=`cat /proc/cmdline`
 case "$cmdline" in
@@ -57,6 +58,8 @@ export_mmc()
     echo "2" > /sys/bus/platform/devices/sunxi_usb_udc/otg_role
 
     logger "Done"
+
+    touch $NO_POWER_OFF
 }
 
 recovery_partX()
@@ -94,7 +97,7 @@ do_recovery()
 
     logger "Shutting down recovery"
 
-    [ ! -f "/tmp/no_poweroff" ] && poweroff
+    [ ! -f "$NO_POWER_OFF" ] && poweroff
 }
 
 
