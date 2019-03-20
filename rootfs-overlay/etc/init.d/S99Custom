@@ -84,7 +84,7 @@ do_recovery()
         logger "mount recovery data part failed"
         leds_off 2 3
         export_mmc
-        exit -1
+        exit 0
     }
     # part1 root-fs
     recovery_partX /mnt/rootfs.img.gz ${TARGET}p1 && leds_off 2
@@ -112,7 +112,7 @@ case "$EMC_TYPE" in
     ;;
     2)
         # mmcblk0p3 var have the recovery flags
-        mount ${TARGET}p3 /mnt || exit -1
+        mount ${TARGET}p3 /mnt || exit 0
         [ -f /mnt/.auto_recovery ] || {
             logger "Soft reset BUT no flag file found, Please do it manual ..."
             umount /mnt
