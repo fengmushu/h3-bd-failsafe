@@ -79,6 +79,8 @@ do_recovery()
     #part4 is backup storage
     mount ${TARGET}p4 /mnt || {
         logger "mount recovery data part failed"
+        leds_off 2 3
+        export_mmc
         exit -1
     }
     # part1 root-fs
@@ -111,6 +113,8 @@ case "$EMC_TYPE" in
         [ -f /mnt/.auto_recovery ] || {
             logger "Soft reset BUT no flag file found, Please do it manual ..."
             umount /mnt
+            leds_off 2
+            export_mmc
             exit 0
         }
         umount /mnt
