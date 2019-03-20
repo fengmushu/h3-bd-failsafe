@@ -73,8 +73,10 @@ recovery_partX()
         echo `date` >> /mnt/recovery.log
         echo "$TARF -> $PART" >> /mnt/recovery.log
 
-        zcat ${TARF} > ${PART}
+        zcat ${TARF} > ${PART} && return 0
     }
+    logger "not found: {$TARF for $PART}."
+    touch $NO_POWER_OFF
 }
 
 do_recovery()
@@ -95,9 +97,15 @@ do_recovery()
 
     umount /mnt && leds_off 5
 
-    logger "Shutting down recovery"
+    [ ! -f "$NO_POWER_OFF" ] && {
 
-    [ ! -f "$NO_POWER_OFF" ] && poweroff
+        leds_on 2 3 4 5
+        sleep 3
+        leds_off 2 3 4 5
+
+        logger "Shutting down recovery"
+        poweroff
+    }
 }
 
 
@@ -109,6 +117,7 @@ case "$EMC_TYPE" in
     1)
         logger "GPIO key reset pressed force recovery ..."
         do_recovery
+        exit 0
     ;;
     2)
         # mmcblk0p3 var have the recovery flags
@@ -122,6 +131,7 @@ case "$EMC_TYPE" in
         }
         umount /mnt
         do_recovery
+        exit 0
     ;;
     *)
         logger "unknow emergency mode ... exit~!"
