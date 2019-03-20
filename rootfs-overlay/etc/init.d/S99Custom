@@ -117,7 +117,6 @@ case "$EMC_TYPE" in
     1)
         logger "GPIO key reset pressed force recovery ..."
         do_recovery
-        exit 0
     ;;
     2)
         # mmcblk0p3 var have the recovery flags
@@ -131,7 +130,6 @@ case "$EMC_TYPE" in
         }
         umount /mnt
         do_recovery
-        exit 0
     ;;
     *)
         logger "unknow emergency mode ... exit~!"
